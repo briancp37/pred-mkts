@@ -1,0 +1,14 @@
+
+[project]
+name = "project_template"
+version = "0.1.0"
+description = "Domain-neutral Cursor/AI-agent project template"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Your Name" }]
+
+[tool.uv]
+# uv respects requires-python; venv will be .venv/
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

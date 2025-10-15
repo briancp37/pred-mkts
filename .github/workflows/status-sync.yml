@@ -1,0 +1,38 @@
+
+name: status-sync
+on:
+  pull_request:
+    branches: ["*"]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify task status sync
+        run: |
+          python - << 'PY'
+import re, glob, pathlib, sys
+errs=[]
+for pbi_dir in glob.glob("docs/delivery/*/"):
+    idx_path = pathlib.Path(pbi_dir, "tasks.md")
+    if not idx_path.exists():
+        continue
+    idx = idx_path.read_text(encoding="utf-8")
+    rows = re.findall(r'\|\s*(\d+-\d+)\s*\|\s*\[[^\]]+\]\(\./\1\.md\)\s*\|\s*([A-Za-z]+)\s*\|', idx)
+    for tid, idx_status in rows:
+        task_file = pathlib.Path(pbi_dir, f"{tid}.md")
+        if not task_file.exists():
+            errs.append(f"Missing task file: {task_file}")
+            continue
+        txt = task_file.read_text(encoding="utf-8")
+        rows2 = re.findall(r'\|\s*\d{4}-\d{2}-\d{2}.*\|\s*[A-Za-z]+\s*\|\s*([A-Za-z]+)\s*\|', txt)
+        if rows2:
+            file_status = rows2[-1]
+            if file_status != idx_status:
+                errs.append(f"{tid}: index={idx_status} file={file_status}")
+if errs:
+    print("STATUS SYNC ERRORS:")
+    for e in errs: print(" -", e)
+    sys.exit(1)
+print("Status sync OK")
+PY

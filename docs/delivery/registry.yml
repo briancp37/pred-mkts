@@ -1,0 +1,9 @@
+
+version: 1
+code_paths: []
+configs: {}
+constants: {}
+docs:
+  backlog: docs/delivery/backlog.md
+  product_prd: docs/delivery/product-prd.md
+  pbi_dirs_glob: docs/delivery/*/

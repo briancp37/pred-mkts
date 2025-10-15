@@ -1,0 +1,21 @@
+
+repos:
+- repo: local
+  hooks:
+  - id: commit-msg-prefix
+    name: enforce <pbi>-<task> prefix
+    entry: uv run python tools/commit_msg_check.py
+    language: system
+    stages: [commit-msg]
+
+  - id: update-registry
+    name: update registry
+    entry: uv run python tools/update_registry.py
+    language: system
+    files: ^(src/|docs/delivery/)
+
+  - id: update-state
+    name: update state
+    entry: uv run python tools/update_state.py
+    language: system
+    files: ^(docs/delivery/)
