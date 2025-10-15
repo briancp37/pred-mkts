@@ -6,9 +6,9 @@ This script renders docs/delivery/_state.md automatically via pre-commit.
 from pathlib import Path
 
 # ---- EDIT THESE WHEN YOU SWITCH TASKS ----
-ACTIVE_PBI = ""          # e.g., "1"
-ACTIVE_TASKS = []        # e.g., ["1-2"]
-touchpoints = []         # e.g., ["src/app/config.py"]
+ACTIVE_PBI = "0"          # e.g., "1"
+ACTIVE_TASKS = ["0-1"]        # e.g., ["1-2"]
+touchpoints = ["docs/delivery/0/0-1.md", "src/core/datasource.py"]         # e.g., ["src/app/config.py"]
 # ------------------------------------------
 
 content = f"""# Project State (manual, short)
