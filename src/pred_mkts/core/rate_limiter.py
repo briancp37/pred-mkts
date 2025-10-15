@@ -8,6 +8,7 @@ This module implements an adaptive rate limiter that:
 - Handles 429 and 5xx responses with appropriate retry logic
 - Supports per-host bucket management
 - Provides concurrency control via semaphores
+- Emits structured telemetry for monitoring
 """
 import asyncio
 import logging
@@ -23,6 +24,7 @@ from typing import Any, Dict, Optional
 
 from .config import ExchangeConfig
 from .datasource import RequestSpec
+from .telemetry import TelemetryDecision, create_event, get_recorder
 
 logger = logging.getLogger(__name__)
 
@@ -325,6 +327,27 @@ class RateLimiter:
         
         return result if result else None
     
+    def _extract_relevant_headers(self, headers: Dict[str, str]) -> Dict[str, str]:
+        """
+        Extract relevant rate limit headers for telemetry.
+        
+        Args:
+            headers: Full response headers
+            
+        Returns:
+            Dict of relevant headers
+        """
+        relevant = {}
+        header_config = self.config.headers
+        
+        # Standard rate limit headers
+        for key in ["limit", "remaining", "reset", "retry_after"]:
+            header_name = header_config.get(key)
+            if header_name and header_name in headers:
+                relevant[header_name] = headers[header_name]
+        
+        return relevant
+    
     def _apply_adaptive_rate(
         self,
         bucket: TokenBucket,
@@ -393,6 +416,8 @@ class RateLimiter:
         Yields:
             RateLimitGuard with wait time information
         """
+        import time
+        
         bucket_key = self._get_bucket_key(request_spec)
         bucket = self._get_or_create_bucket(bucket_key)
         
@@ -402,10 +427,11 @@ class RateLimiter:
         try:
             # Wait for tokens
             wait_time = 0.0
+            start_time = time.time()
+            
             while not bucket.consume(1):
                 sleep_time = bucket.time_until_tokens(1)
                 if sleep_time > 0:
-                    import time
                     time.sleep(min(sleep_time, 0.1))  # Sleep in small increments
                     wait_time += min(sleep_time, 0.1)
             
@@ -417,6 +443,18 @@ class RateLimiter:
                     self._stats.total_wait_time += wait_time
             
             guard = RateLimitGuard(wait_time=wait_time, bucket_key=bucket_key)
+            
+            # [CTX:PBI-0:0-5:TELEM] Emit telemetry event
+            decision = TelemetryDecision.THROTTLE if wait_time > 0 else TelemetryDecision.ALLOW
+            event = create_event(
+                exchange=self.config.host,
+                endpoint=request_spec.url,
+                decision=decision,
+                sleep_s=wait_time,
+                bucket_key=bucket_key,
+                tokens_available=bucket.peek(),
+            )
+            get_recorder().record(event)
             
             logger.debug(
                 f"[CTX:PBI-0:0-3:RL] Acquired rate limit for {bucket_key}, "
@@ -463,6 +501,18 @@ class RateLimiter:
             
             guard = RateLimitGuard(wait_time=wait_time, bucket_key=bucket_key)
             
+            # [CTX:PBI-0:0-5:TELEM] Emit telemetry event
+            decision = TelemetryDecision.THROTTLE if wait_time > 0 else TelemetryDecision.ALLOW
+            event = create_event(
+                exchange=self.config.host,
+                endpoint=request_spec.url,
+                decision=decision,
+                sleep_s=wait_time,
+                bucket_key=bucket_key,
+                tokens_available=bucket.peek(),
+            )
+            get_recorder().record(event)
+            
             logger.debug(
                 f"[CTX:PBI-0:0-3:RL] Acquired rate limit for {bucket_key}, "
                 f"waited {wait_time:.3f}s"
@@ -477,7 +527,9 @@ class RateLimiter:
         self,
         request_spec: RequestSpec,
         headers: Dict[str, str],
-        status_code: int
+        status_code: int,
+        elapsed_ms: float = 0.0,
+        attempt: int = 0
     ) -> Optional[float]:
         """
         Process response headers and return wait time if needed.
@@ -486,6 +538,8 @@ class RateLimiter:
             request_spec: The request that was made
             headers: Response headers
             status_code: HTTP status code
+            elapsed_ms: Request duration in milliseconds
+            attempt: Retry attempt number
             
         Returns:
             Seconds to wait before retry, or None if no wait needed
@@ -493,10 +547,27 @@ class RateLimiter:
         bucket_key = self._get_bucket_key(request_spec)
         bucket = self._get_or_create_bucket(bucket_key)
         
+        # Extract relevant rate limit headers for telemetry
+        relevant_headers = self._extract_relevant_headers(headers)
+        
         # Parse rate limit headers for adaptive adjustment
         rate_info = self._parse_rate_limit_headers(headers)
         if rate_info:
             self._apply_adaptive_rate(bucket, rate_info)
+            
+            # [CTX:PBI-0:0-5:TELEM] Emit adaptive adjustment event
+            event = create_event(
+                exchange=self.config.host,
+                endpoint=request_spec.url,
+                decision=TelemetryDecision.ADAPTIVE,
+                status=status_code,
+                elapsed_ms=elapsed_ms,
+                headers_seen=relevant_headers,
+                bucket_key=bucket_key,
+                attempt=attempt,
+                tokens_available=bucket.peek(),
+            )
+            get_recorder().record(event)
             
             # Check if we're close to limit
             remaining = rate_info.get("remaining", 0)
@@ -512,6 +583,21 @@ class RateLimiter:
                 
                 with self._stats_lock:
                     self._stats.requests_throttled += 1
+                
+                # [CTX:PBI-0:0-5:TELEM] Emit throttle event
+                event = create_event(
+                    exchange=self.config.host,
+                    endpoint=request_spec.url,
+                    decision=TelemetryDecision.THROTTLE,
+                    status=status_code,
+                    elapsed_ms=elapsed_ms,
+                    sleep_s=wait_time,
+                    headers_seen=relevant_headers,
+                    bucket_key=bucket_key,
+                    attempt=attempt,
+                    tokens_available=bucket.peek(),
+                )
+                get_recorder().record(event)
                 
                 return wait_time
         
@@ -529,6 +615,22 @@ class RateLimiter:
                         f"[CTX:PBI-0:0-3:RL] 429 response, "
                         f"Retry-After: {wait_time:.2f}s"
                     )
+                    
+                    # [CTX:PBI-0:0-5:TELEM] Emit backoff event
+                    event = create_event(
+                        exchange=self.config.host,
+                        endpoint=request_spec.url,
+                        decision=TelemetryDecision.BACKOFF_429,
+                        status=status_code,
+                        elapsed_ms=elapsed_ms,
+                        sleep_s=wait_time,
+                        headers_seen=relevant_headers,
+                        bucket_key=bucket_key,
+                        attempt=attempt,
+                        tokens_available=bucket.peek(),
+                    )
+                    get_recorder().record(event)
+                    
                     return wait_time
             
             # Fallback to exponential backoff
@@ -537,6 +639,22 @@ class RateLimiter:
                 f"[CTX:PBI-0:0-3:RL] 429 response, "
                 f"using backoff: {wait_time:.2f}s"
             )
+            
+            # [CTX:PBI-0:0-5:TELEM] Emit backoff event
+            event = create_event(
+                exchange=self.config.host,
+                endpoint=request_spec.url,
+                decision=TelemetryDecision.BACKOFF_429,
+                status=status_code,
+                elapsed_ms=elapsed_ms,
+                sleep_s=wait_time,
+                headers_seen=relevant_headers,
+                bucket_key=bucket_key,
+                attempt=attempt,
+                tokens_available=bucket.peek(),
+            )
+            get_recorder().record(event)
+            
             return wait_time
         
         # Handle 5xx
@@ -550,6 +668,22 @@ class RateLimiter:
                 f"[CTX:PBI-0:0-3:RL] {status_code} response, "
                 f"using backoff: {wait_time:.2f}s"
             )
+            
+            # [CTX:PBI-0:0-5:TELEM] Emit backoff event
+            event = create_event(
+                exchange=self.config.host,
+                endpoint=request_spec.url,
+                decision=TelemetryDecision.BACKOFF_5XX,
+                status=status_code,
+                elapsed_ms=elapsed_ms,
+                sleep_s=wait_time,
+                headers_seen=relevant_headers,
+                bucket_key=bucket_key,
+                attempt=attempt,
+                tokens_available=bucket.peek(),
+            )
+            get_recorder().record(event)
+            
             return wait_time
         
         return None
