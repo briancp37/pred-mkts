@@ -2,7 +2,9 @@ version: 1
 code_paths:
 - src/pred_mkts/__init__.py
 - src/pred_mkts/core/__init__.py
+- src/pred_mkts/core/config.py
 - src/pred_mkts/core/datasource.py
+- src/pred_mkts/core/rate_limiter.py
 - src/pred_mkts/datasources/__init__.py
 - src/pred_mkts/datasources/polymarket.py
 configs: {}
