@@ -1,0 +1,19 @@
+# [CTX:PBI-0:0-2:CFG] Per-exchange rate limit configuration
+# This file defines rate limiting policies for different exchanges
+
+exchanges:
+  polymarket:
+    host: api.polymarket.com
+    steady_rate: 10      # tokens/sec (default)
+    burst: 20
+    max_concurrency: 4
+    headers:
+      retry_after: Retry-After
+      limit: X-RateLimit-Limit
+      remaining: X-RateLimit-Remaining
+      reset: X-RateLimit-Reset
+    buckets:
+      - key: "global"                  # group endpoints if needed
+        pattern: "/v{1,}/.*"          # regex
+        share_with: ["orders", "markets"]
+
