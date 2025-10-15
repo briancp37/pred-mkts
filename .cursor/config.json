@@ -1,0 +1,7 @@
+{
+    "rules": ["./rules.md"],
+    "alwaysInclude": [
+      "docs/delivery/_state.md",
+      "docs/delivery/registry.yml"
+    ]
+  }

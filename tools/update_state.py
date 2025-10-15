@@ -7,7 +7,7 @@ from pathlib import Path
 
 # ---- EDIT THESE WHEN YOU SWITCH TASKS ----
 ACTIVE_PBI = "0"          # e.g., "1"
-ACTIVE_TASKS = ["0-3"]        # e.g., ["1-2"]
+ACTIVE_TASKS = ["0-5"]        # e.g., ["1-2"]
 touchpoints = ["config/limits.yml", "src/pred_mkts/core/config.py", "tests/unit/test_config.py"]         # e.g., ["src/app/config.py"]
 # ------------------------------------------
 
