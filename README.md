@@ -1,4 +1,4 @@
-# Cursor-First Project Template (Domain-Neutral)
+# Prediction Markets
 
 This repository provides a **Cursor-optimized software development template** — complete with rules, automation, and folder structure that allow humans and AI agents to work together consistently and safely.
 
