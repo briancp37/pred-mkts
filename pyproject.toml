@@ -19,6 +19,8 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [dependency-groups]
 dev = [
@@ -27,4 +29,6 @@ dev = [
 ]
 test = [
     "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "aiohttp>=3.10.0",
 ]
