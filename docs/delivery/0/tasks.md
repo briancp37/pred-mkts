@@ -11,4 +11,4 @@ This document lists all tasks associated with PBI 0.
 | 0-3 | [Header-aware rate limiter](./0-3.md) | Done | Token-bucket with adaptive rate; honors Retry-After & X-RateLimit-*; jittered backoff on 429/5xx. |
 | 0-4 | [Stub server + tests](./0-4.md) | Done | Local HTTP server simulating 200/429/5xx and headers; unit/integration tests. |
 | 0-5 | [Telemetry & runbook](./0-5.md) | Completed | Structured logging; explain limiter behavior and troubleshooting. |
-| 0-6 | [E2E CoS test for PBI-0](./0-6.md) | Proposed | End-to-end: burst then sustain, trigger 429, verify recovery & adaptation. |
+| 0-6 | [E2E CoS test for PBI-0](./0-6.md) | Review | End-to-end: burst then sustain, trigger 429, verify recovery & adaptation. |
