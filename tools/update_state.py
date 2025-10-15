@@ -7,8 +7,8 @@ from pathlib import Path
 
 # ---- EDIT THESE WHEN YOU SWITCH TASKS ----
 ACTIVE_PBI = "0"          # e.g., "1"
-ACTIVE_TASKS = ["0-1"]        # e.g., ["1-2"]
-touchpoints = ["docs/delivery/0/0-1.md", "src/core/datasource.py"]         # e.g., ["src/app/config.py"]
+ACTIVE_TASKS = ["0-2"]        # e.g., ["1-2"]
+touchpoints = ["config/limits.yml", "src/pred_mkts/core/config.py", "tests/unit/test_config.py"]         # e.g., ["src/app/config.py"]
 # ------------------------------------------
 
 content = f"""# Project State (manual, short)
