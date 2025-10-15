@@ -1,5 +1,10 @@
 version: 1
-code_paths: []
+code_paths:
+- src/pred_mkts/__init__.py
+- src/pred_mkts/core/__init__.py
+- src/pred_mkts/core/datasource.py
+- src/pred_mkts/datasources/__init__.py
+- src/pred_mkts/datasources/polymarket.py
 configs: {}
 constants: {}
 docs:

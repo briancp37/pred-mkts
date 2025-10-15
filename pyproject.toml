@@ -7,6 +7,13 @@ readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Your Name" }]
 
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.uv]
 # uv respects requires-python; venv will be .venv/
 
@@ -17,4 +24,7 @@ testpaths = ["tests"]
 dev = [
     "pre-commit>=4.3.0",
     "pyyaml>=6.0.3",
+]
+test = [
+    "pytest>=8.0.0",
 ]
