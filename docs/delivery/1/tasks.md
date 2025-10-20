@@ -6,7 +6,7 @@ This document lists all tasks associated with PBI 1.
 ## Task Summary
 | Task ID | Name | Status | Description |
 | :------ | :--- | :----- | :---------- |
-| 1-1 | [Finalize PBI-1 PRD](./1-1.md) | Proposed | Flesh out `docs/delivery/1/prd.md` to Agreed: scope, endpoints, storage layout, CoS. |
+| 1-1 | [Finalize PBI-1 PRD](./1-1.md) | Review | Flesh out `docs/delivery/1/prd.md` to Agreed: scope, endpoints, storage layout, CoS. |
 | 1-2 | [Polymarket API surface guide](./1-2.md) | Proposed | Create `1-2-polymarket-guide.md` from OpenAPI/web docs; pagination, filters, limits. |
 | 1-3 | [Polymarket DataSource adapter](./1-3.md) | Proposed | Implement `datasources/polymarket.py` using PBI-0 interfaces; auth, prepare_request, paginate. |
 | 1-4 | [Raw snapshot writer + layout](./1-4.md) | Proposed | Define snapshot directory scheme, metadata manifest, atomic writes. |
